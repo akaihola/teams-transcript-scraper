@@ -4,10 +4,11 @@ This project contains a JavaScript scraper designed to extract meeting transcrip
 
 ## Purpose
 
-The main purpose of this script is to scrape and extract the transcript of a Teams meeting. This can be useful for:
+The main purpose of this script is to scrape and extract the transcript of a Teams meeting. This tool is particularly useful for meeting participants (not organizers) who can currently only browse the transcripts but cannot download or copy-paste them. It can be used for:
 - Saving meeting notes for future reference
 - Creating a searchable record of discussions
 - Assisting with meeting minutes creation
+- Enabling participants to have a local copy of the transcript when download options are not available
 
 ## Usage
 
