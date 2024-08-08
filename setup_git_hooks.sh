@@ -1,16 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create the pre-commit hook
 cat > .git/hooks/pre-commit << EOL
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Check if scraper.js was modified
 if git diff --cached --name-only | grep -q "scraper.js"; then
-    # Run the create_bookmarklet.sh script
-    ./create_bookmarklet.sh
+    # Run the update_scripts.sh script
+    ./update_scripts.sh
 
-    # Add the generated bookmarklet.js to the commit
-    git add bookmarklet.js
+    # Add the generated bookmarklet.js and user script to the commit
+    git add bookmarklet.js teams_transcript_downloader.user.js
 fi
 EOL
 
