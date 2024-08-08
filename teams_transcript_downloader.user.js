@@ -53,7 +53,7 @@
 
     // Function to run the scraper script
     async function runScraperScript() {
-        // Copy the content of scraper.js here
+        // START SCRAPER CONTENT
         async function extractListContent() {
             // Get the meeting title
             const meetingTitle = document.querySelector('h2[data-tid="chat-title"] span')?.textContent.trim() || 'Teams Meeting';
@@ -119,6 +119,7 @@
         const maxLength = 251; // 255 - 4 characters for '.md'
         const safeTitleLimited = safeTitle.slice(0, maxLength);
         downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
+        // END SCRAPER CONTENT
     }
 
     // Function to check for the container and add the download button
