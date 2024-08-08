@@ -1,4 +1,6 @@
 async function extractListContent() {
+    // Get the meeting title
+    const meetingTitle = document.querySelector('h2[data-tid="chat-title"] span')?.textContent.trim() || 'Teams Meeting';
     const scrollToTarget = document.getElementById('scrollToTargetTargetedFocusZone');
     if (!scrollToTarget) {
         console.log('scrollToTarget element not found');
@@ -41,7 +43,23 @@ async function extractListContent() {
         lastItemIndex++;
     }
 
-    return listContent;
+    return { content: listContent, title: meetingTitle };
 }
 
-console.log(await extractListContent());
+function downloadMarkdown(content, filename) {
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+const { content, title } = await extractListContent();
+console.log(content);  // Still log the content to the console
+
+// Download the content as a Markdown file
+const safeTitle = title.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').replace(/^\.+/, '').replace(/\.+$/, '').trim();
+const maxLength = 251; // 255 - 4 characters for '.md'
+const safeTitleLimited = safeTitle.slice(0, maxLength);
+downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
