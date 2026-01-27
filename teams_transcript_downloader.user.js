@@ -12,8 +12,8 @@
 
     // Debug configuration
     const DEBUG_PREFIX = '[TTD]'; // Teams Transcript Downloader
-    const DEBUG_ENABLED = true;
-    
+    const DEBUG_ENABLED = false;
+
     function debug(...args) {
         if (DEBUG_ENABLED) console.log(DEBUG_PREFIX, ...args);
     }
@@ -23,7 +23,7 @@
     function debugError(...args) {
         if (DEBUG_ENABLED) console.error(DEBUG_PREFIX, ...args);
     }
-    
+
     debug('🚀 Userscript loaded at', new Date().toISOString());
     debug('📍 URL:', window.location.href);
     debug('📄 Document readyState:', document.readyState);
@@ -36,16 +36,16 @@
     /**
      * Utility function to find the transcript panel element
      * Implements selector fallback strategy for robustness
-     * 
+     *
      * Priority order:
      * 1. #scrollToTargetTargetedFocusZone (PRIMARY - proven in scraper.js)
      * 2. #OneTranscript (FALLBACK - semantic ID fallback)
-     * 
+     *
      * @returns {HTMLElement|null} The transcript panel element or null if not found
      */
     function findTranscriptPanel() {
         debug('🔍 findTranscriptPanel() called');
-        
+
         // Try primary selector (most stable, semantic ID)
         const primaryPanel = document.getElementById('scrollToTargetTargetedFocusZone');
         if (primaryPanel) {
@@ -70,12 +70,12 @@
     /**
      * Create and inject the floating download button into the transcript UI
      * Creates a fixed-position button with enabled/disabled states
-     * 
+     *
      * @returns {void}
      */
     function createFloatingButton() {
         debug('🔘 createFloatingButton() called');
-        
+
         const existing = document.getElementById('teams-transcript-download-btn');
         if (existing) {
             debug('⏭️ Button already exists, skipping creation');
@@ -85,9 +85,9 @@
         debug('📝 Creating new button element...');
         const button = document.createElement('button');
         button.id = 'teams-transcript-download-btn';
-        button.innerHTML = '⬇️';
+        button.textContent = '⬇️';
         button.title = 'No transcript available';
-        
+
         button.style.cssText = `
             position: fixed;
             bottom: 20px;
@@ -110,13 +110,13 @@
         `;
 
         button.dataset.enabled = 'false';
-        
+
         button.addEventListener('mouseenter', () => {
             if (button.dataset.enabled === 'true') {
                 button.style.transform = 'scale(1.1)';
             }
         });
-        
+
         button.addEventListener('mouseleave', () => {
             button.style.transform = 'scale(1)';
         });
@@ -158,32 +158,32 @@
     /**
      * Setup MutationObserver to detect when transcript panel becomes available
      * Monitors document.body for subtree changes and toggles button state accordingly
-     * 
+     *
      * @returns {void}
      */
     function setupTranscriptDetection() {
         debug('👁️ setupTranscriptDetection() called');
-        
+
         let debounceTimer;
         let checkCount = 0;
-        
+
         function checkTranscript() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 checkCount++;
                 debug(`🔄 checkTranscript() #${checkCount}`);
-                
+
                 const transcriptPanel = findTranscriptPanel();
                 const button = document.getElementById('teams-transcript-download-btn');
-                
+
                 debug('  📋 transcriptPanel:', !!transcriptPanel);
                 debug('  🔘 button:', !!button);
-                
+
                 if (!button) {
                     debugWarn('  ⚠️ Button not found in DOM!');
                     return;
                 }
-                
+
                 if (transcriptPanel) {
                     debug('  ✅ Enabling button');
                     button.enable();
@@ -193,19 +193,19 @@
                 }
             }, 150);
         }
-        
+
         debug('📡 Creating MutationObserver...');
         // Create and start the MutationObserver
         const observer = new MutationObserver(() => {
             checkTranscript();
         });
-        
+
         debug('👀 Starting observation on document.body');
         observer.observe(document.body, {
             childList: true,
             subtree: true
         });
-        
+
         debug('🔍 Performing initial check...');
         // Perform initial check in case transcript is already present
         checkTranscript();
@@ -214,7 +214,7 @@
       /**
        * Handle the download button click event
        * Initiates the transcript extraction and download process
-       * 
+       *
        * Flow:
        * 1. Get button reference from DOM
        * 2. Check if button is enabled (early exit if disabled)
@@ -223,47 +223,55 @@
        * 5. Handle errors gracefully with user alert
        * 6. Always re-enable button and restore state in finally block
        * 7. Re-check transcript availability in case user navigated away
-       * 
+       *
        * @returns {void}
        */
       function handleDownloadClick() {
+          debug('🖱️ handleDownloadClick() called');
+
           // Get button reference
           const button = document.getElementById('teams-transcript-download-btn');
+          debug('  🔘 button found:', !!button);
           if (!button) return;
-          
+
+          debug('  📊 button.disabled:', button.disabled);
+          debug('  📊 button.dataset.enabled:', button.dataset.enabled);
+
           // If disabled, don't proceed
           if (button.disabled || button.dataset.enabled === 'false') {
-              debug('Download button clicked but transcript not available');
+              debug('  ⛔ Button is disabled, returning early');
               return;
           }
-          
-          // Store original state for restoration
-          const originalHTML = button.innerHTML;
-          
-          // Disable button to prevent multiple simultaneous clicks
-          button.disabled = true;
-          button.dataset.enabled = 'false';
-          button.style.cursor = 'not-allowed';
-          button.innerHTML = '⏳'; // Show loading indicator
-          
+
+          debug('  ✅ Button is enabled, proceeding with download...');
+
+        // Store original state for restoration
+        const originalText = button.textContent;
+
+        // Disable button to prevent multiple simultaneous clicks
+        button.disabled = true;
+        button.dataset.enabled = 'false';
+        button.style.cursor = 'not-allowed';
+        button.textContent = '⏳'; // Show loading indicator
+
           // Execute async scraper in a separate scope
           (async () => {
               try {
                   debug('Starting transcript extraction...');
-                  
+
                   // Call the scraper function (defined in Zone 2)
                   await runScraperScript();
-                  
+
                   debug('Transcript download completed successfully');
               } catch (error) {
                   debugError('Error downloading transcript:', error);
                   alert('Error downloading transcript. Check the console for details.');
-              } finally {
-                  // Restore button state
-                  button.innerHTML = originalHTML;
+            } finally {
+                // Restore button state
+                button.textContent = originalText;
                   button.disabled = false;
                   button.style.cursor = 'pointer';
-                  
+
                   // Re-check if transcript is still available
                   // (user may have navigated away during download)
                   const transcriptPanel = findTranscriptPanel();
@@ -364,7 +372,7 @@ downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
 
     /**
      * Initialize the userscript on DOM load
-     * 
+     *
      * Current flow:
      * 1. Inject disabled button immediately (createFloatingButton)
      * 2. setupTranscriptDetection() - sets up MutationObserver
@@ -375,7 +383,7 @@ downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
         debug('🎬 initialize() called');
         debug('  📄 readyState:', document.readyState);
         debug('  📦 body exists:', !!document.body);
-        
+
         try {
             debug('  1️⃣ Calling createFloatingButton()...');
             createFloatingButton();
