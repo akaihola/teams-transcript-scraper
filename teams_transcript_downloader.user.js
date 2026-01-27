@@ -10,6 +10,25 @@
 (function() {
     'use strict';
 
+    // Debug configuration
+    const DEBUG_PREFIX = '[TTD]'; // Teams Transcript Downloader
+    const DEBUG_ENABLED = true;
+    
+    function debug(...args) {
+        if (DEBUG_ENABLED) console.log(DEBUG_PREFIX, ...args);
+    }
+    function debugWarn(...args) {
+        if (DEBUG_ENABLED) console.warn(DEBUG_PREFIX, ...args);
+    }
+    function debugError(...args) {
+        if (DEBUG_ENABLED) console.error(DEBUG_PREFIX, ...args);
+    }
+    
+    debug('🚀 Userscript loaded at', new Date().toISOString());
+    debug('📍 URL:', window.location.href);
+    debug('📄 Document readyState:', document.readyState);
+    debug('📦 document.body exists:', !!document.body);
+
     // ============================================
     // ZONE 1: USERSCRIPT INFRASTRUCTURE
     // ============================================
@@ -25,18 +44,25 @@
      * @returns {HTMLElement|null} The transcript panel element or null if not found
      */
     function findTranscriptPanel() {
+        debug('🔍 findTranscriptPanel() called');
+        
         // Try primary selector (most stable, semantic ID)
         const primaryPanel = document.getElementById('scrollToTargetTargetedFocusZone');
         if (primaryPanel) {
+            debug('✅ Found primary panel: #scrollToTargetTargetedFocusZone');
             return primaryPanel;
         }
+        debug('❌ Primary selector not found');
 
         // Try fallback selector (semantic ID, secondary option)
         const fallbackPanel = document.getElementById('OneTranscript');
         if (fallbackPanel) {
+            debug('✅ Found fallback panel: #OneTranscript');
             return fallbackPanel;
         }
+        debug('❌ Fallback selector not found');
 
+        debug('⚠️ No transcript panel found');
         // Neither selector found
         return null;
     }
@@ -48,10 +74,15 @@
      * @returns {void}
      */
     function createFloatingButton() {
-        if (document.getElementById('teams-transcript-download-btn')) {
+        debug('🔘 createFloatingButton() called');
+        
+        const existing = document.getElementById('teams-transcript-download-btn');
+        if (existing) {
+            debug('⏭️ Button already exists, skipping creation');
             return;
         }
 
+        debug('📝 Creating new button element...');
         const button = document.createElement('button');
         button.id = 'teams-transcript-download-btn';
         button.innerHTML = '⬇️';
@@ -90,7 +121,15 @@
             button.style.transform = 'scale(1)';
         });
 
+        debug('📍 Checking document.body:', !!document.body);
+        if (!document.body) {
+            debugError('❌ document.body is null! Cannot append button.');
+            return;
+        }
+
         document.body.appendChild(button);
+        debug('✅ Button appended to document.body');
+        debug('🔍 Verification:', !!document.getElementById('teams-transcript-download-btn'));
 
         // Define public API for enabling/disabling (attached to element)
         button.enable = function() {
@@ -123,107 +162,122 @@
      * @returns {void}
      */
     function setupTranscriptDetection() {
+        debug('👁️ setupTranscriptDetection() called');
+        
         let debounceTimer;
+        let checkCount = 0;
         
         function checkTranscript() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
+                checkCount++;
+                debug(`🔄 checkTranscript() #${checkCount}`);
+                
                 const transcriptPanel = findTranscriptPanel();
                 const button = document.getElementById('teams-transcript-download-btn');
                 
-                if (!button) return;
+                debug('  📋 transcriptPanel:', !!transcriptPanel);
+                debug('  🔘 button:', !!button);
+                
+                if (!button) {
+                    debugWarn('  ⚠️ Button not found in DOM!');
+                    return;
+                }
                 
                 if (transcriptPanel) {
-                    console.log('Transcript panel detected');
+                    debug('  ✅ Enabling button');
                     button.enable();
                 } else {
-                    console.log('Transcript panel not detected');
+                    debug('  ❌ Disabling button');
                     button.disable();
                 }
             }, 150);
         }
         
+        debug('📡 Creating MutationObserver...');
         // Create and start the MutationObserver
         const observer = new MutationObserver(() => {
             checkTranscript();
         });
         
+        debug('👀 Starting observation on document.body');
         observer.observe(document.body, {
             childList: true,
             subtree: true
         });
         
+        debug('🔍 Performing initial check...');
         // Perform initial check in case transcript is already present
         checkTranscript();
     }
 
-     /**
-      * Handle the download button click event
-      * Initiates the transcript extraction and download process
-      * 
-      * Flow:
-      * 1. Get button reference from DOM
-      * 2. Check if button is enabled (early exit if disabled)
-      * 3. Disable button and show loading state (⏳)
-      * 4. Call async runScraperScript() to extract and download
-      * 5. Handle errors gracefully with user alert
-      * 6. Always re-enable button and restore state in finally block
-      * 7. Re-check transcript availability in case user navigated away
-      * 
-      * @returns {void}
-      */
-     function handleDownloadClick() {
-         // Get button reference
-         const button = document.getElementById('teams-transcript-download-btn');
-         if (!button) return;
-         
-         // If disabled, don't proceed
-         if (button.disabled || button.dataset.enabled === 'false') {
-             console.log('Download button clicked but transcript not available');
-             return;
-         }
-         
-         // Store original state for restoration
-         const originalHTML = button.innerHTML;
-         
-         // Disable button to prevent multiple simultaneous clicks
-         button.disabled = true;
-         button.dataset.enabled = 'false';
-         button.style.cursor = 'not-allowed';
-         button.innerHTML = '⏳'; // Show loading indicator
-         
-         // Execute async scraper in a separate scope
-         (async () => {
-             try {
-                 console.log('Starting transcript extraction...');
-                 
-                 // Call the scraper function (defined in Zone 2)
-                 await runScraperScript();
-                 
-                 console.log('Transcript download completed successfully');
-             } catch (error) {
-                 console.error('Error downloading transcript:', error);
-                 alert('Error downloading transcript. Check the console for details.');
-             } finally {
-                 // Restore button state
-                 button.innerHTML = originalHTML;
-                 button.disabled = false;
-                 button.style.cursor = 'pointer';
-                 
-                 // Re-check if transcript is still available
-                 // (user may have navigated away during download)
-                 const transcriptPanel = findTranscriptPanel();
-                 if (transcriptPanel) {
-                     // Transcript still available - keep button enabled
-                     button.dataset.enabled = 'true';
-                 } else {
-                     // Transcript no longer available - disable button
-                     console.log('Transcript panel no longer detected after download');
-                     button.disable();
-                 }
-             }
-         })();
-     }
+      /**
+       * Handle the download button click event
+       * Initiates the transcript extraction and download process
+       * 
+       * Flow:
+       * 1. Get button reference from DOM
+       * 2. Check if button is enabled (early exit if disabled)
+       * 3. Disable button and show loading state (⏳)
+       * 4. Call async runScraperScript() to extract and download
+       * 5. Handle errors gracefully with user alert
+       * 6. Always re-enable button and restore state in finally block
+       * 7. Re-check transcript availability in case user navigated away
+       * 
+       * @returns {void}
+       */
+      function handleDownloadClick() {
+          // Get button reference
+          const button = document.getElementById('teams-transcript-download-btn');
+          if (!button) return;
+          
+          // If disabled, don't proceed
+          if (button.disabled || button.dataset.enabled === 'false') {
+              debug('Download button clicked but transcript not available');
+              return;
+          }
+          
+          // Store original state for restoration
+          const originalHTML = button.innerHTML;
+          
+          // Disable button to prevent multiple simultaneous clicks
+          button.disabled = true;
+          button.dataset.enabled = 'false';
+          button.style.cursor = 'not-allowed';
+          button.innerHTML = '⏳'; // Show loading indicator
+          
+          // Execute async scraper in a separate scope
+          (async () => {
+              try {
+                  debug('Starting transcript extraction...');
+                  
+                  // Call the scraper function (defined in Zone 2)
+                  await runScraperScript();
+                  
+                  debug('Transcript download completed successfully');
+              } catch (error) {
+                  debugError('Error downloading transcript:', error);
+                  alert('Error downloading transcript. Check the console for details.');
+              } finally {
+                  // Restore button state
+                  button.innerHTML = originalHTML;
+                  button.disabled = false;
+                  button.style.cursor = 'pointer';
+                  
+                  // Re-check if transcript is still available
+                  // (user may have navigated away during download)
+                  const transcriptPanel = findTranscriptPanel();
+                  if (transcriptPanel) {
+                      // Transcript still available - keep button enabled
+                      button.dataset.enabled = 'true';
+                  } else {
+                      // Transcript no longer available - disable button
+                      debug('Transcript panel no longer detected after download');
+                      button.disable();
+                  }
+              }
+          })();
+      }
 
     // ============================================
     // ZONE 2: SCRAPER CONTENT (AUTO-SYNCED)
@@ -318,14 +372,32 @@ downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
      * 4. Button click calls handleDownloadClick() -> runScraperScript()
      */
     function initialize() {
-        createFloatingButton();
-        setupTranscriptDetection();
+        debug('🎬 initialize() called');
+        debug('  📄 readyState:', document.readyState);
+        debug('  📦 body exists:', !!document.body);
+        
+        try {
+            debug('  1️⃣ Calling createFloatingButton()...');
+            createFloatingButton();
+            debug('  2️⃣ Calling setupTranscriptDetection()...');
+            setupTranscriptDetection();
+            debug('✅ Initialization complete');
+        } catch (error) {
+            debugError('❌ Initialization failed:', error);
+            debugError('  Stack:', error.stack);
+        }
     }
 
     // Initialize when document is ready
+    debug('⏳ Checking document.readyState:', document.readyState);
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize);
+        debug('  → Document still loading, adding DOMContentLoaded listener');
+        document.addEventListener('DOMContentLoaded', () => {
+            debug('📢 DOMContentLoaded event fired');
+            initialize();
+        });
     } else {
+        debug('  → Document already loaded, initializing immediately');
         initialize();
     }
 
