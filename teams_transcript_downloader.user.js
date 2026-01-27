@@ -43,16 +43,77 @@
 
     /**
      * Create and inject the floating download button into the transcript UI
-     * TODO (Task 3): Implement full UI creation with proper styling and placement
+     * Creates a fixed-position button with enabled/disabled states
      * 
      * @returns {void}
      */
     function createFloatingButton() {
-        // TODO: Implement button creation and styling
-        // - Create button element with download icon
-        // - Style as floating action button or toolbar button
-        // - Position appropriately in transcript UI
-        // - Attach click handler to handleDownloadClick()
+        if (document.getElementById('teams-transcript-download-btn')) {
+            return;
+        }
+
+        const button = document.createElement('button');
+        button.id = 'teams-transcript-download-btn';
+        button.innerHTML = '⬇️';
+        button.title = 'No transcript available';
+        
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        `;
+
+        button.dataset.enabled = 'false';
+        
+        button.addEventListener('mouseenter', () => {
+            if (button.dataset.enabled === 'true') {
+                button.style.transform = 'scale(1.1)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'scale(1)';
+        });
+
+        document.body.appendChild(button);
+
+        // Define public API for enabling/disabling (attached to element)
+        button.enable = function() {
+            this.dataset.enabled = 'true';
+            this.disabled = false;
+            this.title = 'Download Transcript';
+            this.style.backgroundColor = '#6264A7'; // Teams purple
+            this.style.color = 'white';
+            this.style.cursor = 'pointer';
+            this.style.opacity = '1';
+        };
+
+        button.disable = function() {
+            this.dataset.enabled = 'false';
+            this.disabled = true;
+            this.title = 'No transcript available';
+            this.style.backgroundColor = '#ccc';
+            this.style.color = '#666';
+            this.style.cursor = 'not-allowed';
+            this.style.opacity = '0.5';
+        };
+
+        button.addEventListener('click', handleDownloadClick);
     }
 
     /**
@@ -169,16 +230,16 @@ downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
 
     /**
      * Initialize the userscript on DOM load
-     * TODO (Task 5): Wire up observers and button injection
      * 
      * Current flow:
-     * 1. setupTranscriptDetection() - sets up MutationObserver
-     * 2. When transcript detected, createFloatingButton() is called
-     * 3. Button click calls handleDownloadClick() -> runScraperScript()
+     * 1. Inject disabled button immediately (createFloatingButton)
+     * 2. setupTranscriptDetection() - sets up MutationObserver
+     * 3. When transcript detected, button enabled state is toggled
+     * 4. Button click calls handleDownloadClick() -> runScraperScript()
      */
     function initialize() {
-        // TODO: Call setupTranscriptDetection() when ready
-        // This will handle dynamic transcript loading and button injection
+        createFloatingButton();
+        setupTranscriptDetection();
     }
 
     // Initialize when document is ready
