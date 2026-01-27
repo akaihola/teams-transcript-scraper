@@ -157,20 +157,73 @@
         checkTranscript();
     }
 
-    /**
-     * Handle the download button click event
-     * Initiates the transcript extraction and download process
-     * TODO (Task 5): Wire this up to actual button click handler
-     * 
-     * @returns {void}
-     */
-    function handleDownloadClick() {
-        // TODO: Implement click handler
-        // - Prevent default action
-        // - Show loading indicator
-        // - Call runScraperScript()
-        // - Handle errors gracefully
-    }
+     /**
+      * Handle the download button click event
+      * Initiates the transcript extraction and download process
+      * 
+      * Flow:
+      * 1. Get button reference from DOM
+      * 2. Check if button is enabled (early exit if disabled)
+      * 3. Disable button and show loading state (⏳)
+      * 4. Call async runScraperScript() to extract and download
+      * 5. Handle errors gracefully with user alert
+      * 6. Always re-enable button and restore state in finally block
+      * 7. Re-check transcript availability in case user navigated away
+      * 
+      * @returns {void}
+      */
+     function handleDownloadClick() {
+         // Get button reference
+         const button = document.getElementById('teams-transcript-download-btn');
+         if (!button) return;
+         
+         // If disabled, don't proceed
+         if (button.disabled || button.dataset.enabled === 'false') {
+             console.log('Download button clicked but transcript not available');
+             return;
+         }
+         
+         // Store original state for restoration
+         const originalHTML = button.innerHTML;
+         
+         // Disable button to prevent multiple simultaneous clicks
+         button.disabled = true;
+         button.dataset.enabled = 'false';
+         button.style.cursor = 'not-allowed';
+         button.innerHTML = '⏳'; // Show loading indicator
+         
+         // Execute async scraper in a separate scope
+         (async () => {
+             try {
+                 console.log('Starting transcript extraction...');
+                 
+                 // Call the scraper function (defined in Zone 2)
+                 await runScraperScript();
+                 
+                 console.log('Transcript download completed successfully');
+             } catch (error) {
+                 console.error('Error downloading transcript:', error);
+                 alert('Error downloading transcript. Check the console for details.');
+             } finally {
+                 // Restore button state
+                 button.innerHTML = originalHTML;
+                 button.disabled = false;
+                 button.style.cursor = 'pointer';
+                 
+                 // Re-check if transcript is still available
+                 // (user may have navigated away during download)
+                 const transcriptPanel = findTranscriptPanel();
+                 if (transcriptPanel) {
+                     // Transcript still available - keep button enabled
+                     button.dataset.enabled = 'true';
+                 } else {
+                     // Transcript no longer available - disable button
+                     console.log('Transcript panel no longer detected after download');
+                     button.disable();
+                 }
+             }
+         })();
+     }
 
     // ============================================
     // ZONE 2: SCRAPER CONTENT (AUTO-SYNCED)
