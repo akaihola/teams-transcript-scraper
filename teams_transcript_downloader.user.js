@@ -10,48 +10,89 @@
 (function() {
     'use strict';
 
-    // Function to add download button
-    function addDownloadButton() {
-        const container = document.querySelector('.container-189');
-        if (!container) return;
+    // ============================================
+    // ZONE 1: USERSCRIPT INFRASTRUCTURE
+    // ============================================
 
-        const oneTranscript = container.querySelector('#OneTranscript');
-        if (!oneTranscript) return;
+    /**
+     * Utility function to find the transcript panel element
+     * Implements selector fallback strategy for robustness
+     * 
+     * Priority order:
+     * 1. #scrollToTargetTargetedFocusZone (PRIMARY - proven in scraper.js)
+     * 2. #OneTranscript (FALLBACK - semantic ID fallback)
+     * 
+     * @returns {HTMLElement|null} The transcript panel element or null if not found
+     */
+    function findTranscriptPanel() {
+        // Try primary selector (most stable, semantic ID)
+        const primaryPanel = document.getElementById('scrollToTargetTargetedFocusZone');
+        if (primaryPanel) {
+            return primaryPanel;
+        }
 
-        if (container.querySelector('#transcriptViewerControls')) return;
+        // Try fallback selector (semantic ID, secondary option)
+        const fallbackPanel = document.getElementById('OneTranscript');
+        if (fallbackPanel) {
+            return fallbackPanel;
+        }
 
-        const controlsDiv = document.createElement('div');
-        controlsDiv.id = 'transcriptViewerControls';
-        controlsDiv.className = 'transcriptPluginCommandBar-252';
-        controlsDiv.innerHTML = `
-            <div style="position: relative;">
-                <div data-automation-id="visibleContent">
-                    <div class="ms-FocusZone css-406 ms-CommandBar root-443" role="menubar" aria-label="Transcript actions">
-                        <div role="none" class="ms-OverflowSet ms-CommandBar-primaryCommand primarySet-446">
-                            <div class="ms-OverflowSet-item item-447" role="none">
-                                <button type="button" role="menuitem" id="downloadTranscript" class="ms-Button ms-Button--commandBar ms-CommandBarItem-link root-449" aria-label="Download">
-                                    <span class="ms-Button-flexContainer flexContainer-450">
-                                        <i data-icon-name="Download" aria-hidden="true" class="ms-Icon root-147 css-403 ms-Button-icon icon-452" style="font-family: StreamMDL2Icons;">⬇️</i>
-                                        <span class="ms-Button-textContainer textContainer-451">
-                                            <span class="ms-Button-label label-453">Download</span>
-                                        </span>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        container.insertBefore(controlsDiv, oneTranscript);
-
-        // Add event listener to the download button
-        const downloadButton = controlsDiv.querySelector('#downloadTranscript');
-        downloadButton.addEventListener('click', runScraperScript);
+        // Neither selector found
+        return null;
     }
 
-    // Function to run the scraper script
+    /**
+     * Create and inject the floating download button into the transcript UI
+     * TODO (Task 3): Implement full UI creation with proper styling and placement
+     * 
+     * @returns {void}
+     */
+    function createFloatingButton() {
+        // TODO: Implement button creation and styling
+        // - Create button element with download icon
+        // - Style as floating action button or toolbar button
+        // - Position appropriately in transcript UI
+        // - Attach click handler to handleDownloadClick()
+    }
+
+    /**
+     * Setup MutationObserver to detect when transcript panel becomes available
+     * TODO (Task 4): Implement DOM monitoring for dynamic transcript loading
+     * 
+     * @returns {void}
+     */
+    function setupTranscriptDetection() {
+        // TODO: Implement MutationObserver
+        // - Watch for additions of #scrollToTargetTargetedFocusZone
+        // - Watch for additions of #OneTranscript
+        // - Call createFloatingButton() when transcript is detected
+        // - Re-check on DOM mutations to handle dynamic loading
+    }
+
+    /**
+     * Handle the download button click event
+     * Initiates the transcript extraction and download process
+     * TODO (Task 5): Wire this up to actual button click handler
+     * 
+     * @returns {void}
+     */
+    function handleDownloadClick() {
+        // TODO: Implement click handler
+        // - Prevent default action
+        // - Show loading indicator
+        // - Call runScraperScript()
+        // - Handle errors gracefully
+    }
+
+    // ============================================
+    // ZONE 2: SCRAPER CONTENT (AUTO-SYNCED)
+    // ============================================
+
+    /**
+     * Main scraper function - extracts and downloads transcript content
+     * This content is automatically synced with scraper.js via update_scripts.sh
+     * DO NOT EDIT DIRECTLY - edit scraper.js and run update_scripts.sh
+     */
     async function runScraperScript() {
         // START SCRAPER CONTENT
         async function extractListContent() {
@@ -122,16 +163,29 @@ downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
         // END SCRAPER CONTENT
     }
 
-    // Function to check for the container and add the download button
-    function checkForContainer() {
-        const container = document.querySelector('.container-189');
-        if (container) {
-            addDownloadButton();
-        } else {
-            setTimeout(checkForContainer, 1000); // Check again after 1 second
-        }
+    // ============================================
+    // ZONE 1: INITIALIZATION
+    // ============================================
+
+    /**
+     * Initialize the userscript on DOM load
+     * TODO (Task 5): Wire up observers and button injection
+     * 
+     * Current flow:
+     * 1. setupTranscriptDetection() - sets up MutationObserver
+     * 2. When transcript detected, createFloatingButton() is called
+     * 3. Button click calls handleDownloadClick() -> runScraperScript()
+     */
+    function initialize() {
+        // TODO: Call setupTranscriptDetection() when ready
+        // This will handle dynamic transcript loading and button injection
     }
 
-    // Start checking for the container
-    checkForContainer();
+    // Initialize when document is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
+    }
+
 })();
