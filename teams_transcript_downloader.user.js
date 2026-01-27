@@ -118,16 +118,43 @@
 
     /**
      * Setup MutationObserver to detect when transcript panel becomes available
-     * TODO (Task 4): Implement DOM monitoring for dynamic transcript loading
+     * Monitors document.body for subtree changes and toggles button state accordingly
      * 
      * @returns {void}
      */
     function setupTranscriptDetection() {
-        // TODO: Implement MutationObserver
-        // - Watch for additions of #scrollToTargetTargetedFocusZone
-        // - Watch for additions of #OneTranscript
-        // - Call createFloatingButton() when transcript is detected
-        // - Re-check on DOM mutations to handle dynamic loading
+        let debounceTimer;
+        
+        function checkTranscript() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const transcriptPanel = findTranscriptPanel();
+                const button = document.getElementById('teams-transcript-download-btn');
+                
+                if (!button) return;
+                
+                if (transcriptPanel) {
+                    console.log('Transcript panel detected');
+                    button.enable();
+                } else {
+                    console.log('Transcript panel not detected');
+                    button.disable();
+                }
+            }, 150);
+        }
+        
+        // Create and start the MutationObserver
+        const observer = new MutationObserver(() => {
+            checkTranscript();
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Perform initial check in case transcript is already present
+        checkTranscript();
     }
 
     /**
