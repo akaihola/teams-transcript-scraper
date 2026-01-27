@@ -299,8 +299,32 @@
     async function runScraperScript() {
         // START SCRAPER CONTENT
         async function extractListContent() {
-    // Get the meeting title
-    const meetingTitle = document.querySelector('h2[data-tid="chat-title"] span')?.textContent.trim() || 'Teams Meeting';
+    // Get the meeting date from the intelligent recap header
+    // Format: "Tuesday, January 27, 2026 11:31 AM - 12:00 PM"
+    const dateTimeSpan = document.querySelector('[data-tid="intelligent-recap-header"] span[dir="auto"]');
+    let meetingDate = '';
+    if (dateTimeSpan) {
+        const dateTimeText = dateTimeSpan.textContent.trim();
+        // Parse date like "Tuesday, January 27, 2026 11:31 AM - 12:00 PM"
+        const dateMatch = dateTimeText.match(/(\w+),\s+(\w+)\s+(\d+),\s+(\d+)/);
+        if (dateMatch) {
+            const [, , monthName, day, year] = dateMatch;
+            const months = {
+                'January': '01', 'February': '02', 'March': '03', 'April': '04',
+                'May': '05', 'June': '06', 'July': '07', 'August': '08',
+                'September': '09', 'October': '10', 'November': '11', 'December': '12'
+            };
+            const month = months[monthName] || '01';
+            meetingDate = `${year}-${month}-${day.padStart(2, '0')}`;
+        }
+    }
+
+    // Get the meeting title from entity header (more specific selector)
+    // Falls back to chat-title h2 if entity header not found
+    const entityHeaderTitle = document.querySelector('[data-tid="entity-header"] span[dir="auto"]');
+    const chatTitle = document.querySelector('h2[data-tid="chat-title"] span');
+    const meetingTitle = entityHeaderTitle?.textContent.trim() || chatTitle?.textContent.trim() || 'Teams Meeting';
+
     const scrollToTarget = document.getElementById('scrollToTargetTargetedFocusZone');
     if (!scrollToTarget) {
         console.log('scrollToTarget element not found');
@@ -343,7 +367,7 @@
         lastItemIndex++;
     }
 
-    return { content: listContent, title: meetingTitle };
+    return { content: listContent, title: meetingTitle, date: meetingDate };
 }
 
 function downloadMarkdown(content, filename) {
@@ -355,14 +379,15 @@ function downloadMarkdown(content, filename) {
     URL.revokeObjectURL(link.href);
 }
 
-const { content, title } = await extractListContent();
+const { content, title, date } = await extractListContent();
 console.log(content);  // Still log the content to the console
 
-// Download the content as a Markdown file
+// Build filename: "YYYY-MM-DD Title.md" or "Title.md" if no date
 const safeTitle = title.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').replace(/^\.+/, '').replace(/\.+$/, '').trim();
-const maxLength = 251; // 255 - 4 characters for '.md'
+const datePrefix = date ? `${date} ` : '';
+const maxLength = date ? 240 : 251;
 const safeTitleLimited = safeTitle.slice(0, maxLength);
-downloadMarkdown(content, `${safeTitleLimited || 'Teams_Meeting'}.md`);
+downloadMarkdown(content, `${datePrefix}${safeTitleLimited || 'Teams_Meeting'}.md`);
         // END SCRAPER CONTENT
     }
 
