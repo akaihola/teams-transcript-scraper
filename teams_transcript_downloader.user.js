@@ -485,14 +485,16 @@ downloadMarkdown(content, `${datePrefix}${safeTitleLimited || 'Teams_Meeting'}.m
 
         try {
             if (!isInIframe) {
-                debug('  📡 Setting up meeting info responder (main frame)');
+                debug('  📡 Setting up meeting info responder (main frame only)');
                 setupMeetingInfoResponder();
+                debug('✅ Main frame initialization complete (no button)');
+                return;
             }
             debug('  1️⃣ Calling createFloatingButton()...');
             createFloatingButton();
             debug('  2️⃣ Calling setupTranscriptDetection()...');
             setupTranscriptDetection();
-            debug('✅ Initialization complete');
+            debug('✅ Iframe initialization complete');
         } catch (error) {
             debugError('❌ Initialization failed:', error);
             debugError('  Stack:', error.stack);
