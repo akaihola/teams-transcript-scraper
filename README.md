@@ -27,7 +27,16 @@ The main purpose of this script is to scrape and extract the transcript of a Tea
 
 ## File Structure
 
-- `scraper.js`: Contains the main scraping functionality for Teams meeting transcripts.
+- `scraper.js`: Contains the main scraping functionality for Teams meeting transcripts. Used as the single source of truth for the bookmarklet and userscript Zone 2 content.
+- `teams_transcript_downloader.user.js`: Userscript that adds a floating download button. Runs in both the Teams main page and the SharePoint iframe that hosts the transcript.
+- `bookmarklet.js`: Minified bookmarklet version of the scraper.
+- `update_scripts.sh`: Syncs `scraper.js` into the bookmarklet and userscript.
+
+### Architecture Note
+
+In Teams v2, the transcript panel lives inside a cross-origin SharePoint iframe (`*.sharepoint.com`). The userscript runs in both frames:
+- **Main Teams frame**: Sets up a `postMessage` responder to provide meeting title and date to the iframe.
+- **SharePoint iframe**: Detects the transcript panel, shows the download button, and requests meeting metadata from the parent frame via `postMessage`.
 
 ## Note
 

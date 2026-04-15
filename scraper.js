@@ -1,29 +1,56 @@
 async function extractListContent() {
-    // Get the meeting date from the intelligent recap header
-    // Format: "Tuesday, January 27, 2026 11:31 AM - 12:00 PM"
-    const dateTimeSpan = document.querySelector('[data-tid="intelligent-recap-header"] span[dir="auto"]');
-    let meetingDate = '';
-    if (dateTimeSpan) {
-        const dateTimeText = dateTimeSpan.textContent.trim();
-        // Parse date like "Tuesday, January 27, 2026 11:31 AM - 12:00 PM"
-        const dateMatch = dateTimeText.match(/(\w+),\s+(\w+)\s+(\d+),\s+(\d+)/);
-        if (dateMatch) {
-            const [, , monthName, day, year] = dateMatch;
-            const months = {
-                'January': '01', 'February': '02', 'March': '03', 'April': '04',
-                'May': '05', 'June': '06', 'July': '07', 'August': '08',
-                'September': '09', 'October': '10', 'November': '11', 'December': '12'
-            };
-            const month = months[monthName] || '01';
-            meetingDate = `${year}-${month}-${day.padStart(2, '0')}`;
-        }
-    }
+    const months = {
+        'January': '01', 'February': '02', 'March': '03', 'April': '04',
+        'May': '05', 'June': '06', 'July': '07', 'August': '08',
+        'September': '09', 'October': '10', 'November': '11', 'December': '12'
+    };
 
-    // Get the meeting title from entity header (more specific selector)
-    // Falls back to chat-title h2 if entity header not found
-    const entityHeaderTitle = document.querySelector('[data-tid="entity-header"] span[dir="auto"]');
-    const chatTitle = document.querySelector('h2[data-tid="chat-title"] span');
-    const meetingTitle = entityHeaderTitle?.textContent.trim() || chatTitle?.textContent.trim() || 'Teams Meeting';
+    let meetingDate = '';
+    let meetingTitle = 'Teams Meeting';
+
+    // Detect iframe context (transcript may live in a SharePoint iframe)
+    const inIframe = (() => {
+        try { return window.self !== window.top; }
+        catch (e) { return true; }
+    })();
+
+    if (inIframe) {
+        // Request meeting info from the parent Teams frame via postMessage.
+        // The userscript running in the parent frame responds with title/date.
+        // Falls back to defaults after 2 s timeout (e.g. bookmarklet use).
+        const parentInfo = await new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(null), 2000);
+            const handler = (event) => {
+                if (event.data && event.data.type === 'TTD_MEETING_INFO') {
+                    clearTimeout(timeout);
+                    window.removeEventListener('message', handler);
+                    resolve(event.data);
+                }
+            };
+            window.addEventListener('message', handler);
+            window.parent.postMessage({ type: 'TTD_REQUEST_MEETING_INFO' }, '*');
+        });
+
+        if (parentInfo) {
+            meetingTitle = parentInfo.title || meetingTitle;
+            meetingDate = parentInfo.date || meetingDate;
+        }
+    } else {
+        // Main frame: get meeting info directly from Teams DOM
+        const dateTimeSpan = document.querySelector('[data-tid="intelligent-recap-header"] span[dir="auto"]');
+        if (dateTimeSpan) {
+            const dateTimeText = dateTimeSpan.textContent.trim();
+            const dateMatch = dateTimeText.match(/(\w+),\s+(\w+)\s+(\d+),\s+(\d+)/);
+            if (dateMatch) {
+                const [, , monthName, day, year] = dateMatch;
+                meetingDate = `${year}-${months[monthName] || '01'}-${day.padStart(2, '0')}`;
+            }
+        }
+
+        const entityHeaderTitle = document.querySelector('[data-tid="entity-header"] span[dir="auto"]');
+        const chatTitle = document.querySelector('h2[data-tid="chat-title"] span');
+        meetingTitle = entityHeaderTitle?.textContent.trim() || chatTitle?.textContent.trim() || 'Teams Meeting';
+    }
 
     const scrollToTarget = document.getElementById('scrollToTargetTargetedFocusZone');
     if (!scrollToTarget) {
